@@ -1,0 +1,74 @@
+# Candidate profile — copy to config/profile.yaml and edit.
+#   cp config/profile.example.yaml config/profile.yaml
+#
+# config/profile.yaml is gitignored: it holds your personal details.
+# Every value below is a placeholder. Nothing here is used unless you edit it.
+
+# Roles you actually want. Used for deterministic title matching and by the model.
+targetRoles:
+  - Backend Engineer
+  - Senior Backend Engineer
+  - Full Stack Engineer
+  - Software Engineer
+
+# Cities you would work in. Leave empty to accept any location.
+preferredLocations:
+  - Bengaluru
+  - Remote
+
+# REMOTE_ONLY | REMOTE_PREFERRED | HYBRID | ONSITE | ANY
+remotePreference: REMOTE_PREFERRED
+
+yearsOfExperience: 6
+# Optional. Postings demanding far more than this are penalised, not auto-rejected.
+maximumExperienceAccepted: 12
+
+salary:
+  currency: INR
+  # Annual, in whole units. 2500000 = 25 LPA. Leave out to disable salary filtering.
+  minimum: 2500000
+  preferred: 4000000
+
+# Skills you genuinely have and want to use.
+requiredSkills:
+  - TypeScript
+  - Node.js
+  - PostgreSQL
+
+preferredSkills:
+  - AWS
+  - Docker
+  - GraphQL
+  - Redis
+  - Kubernetes
+
+# Titles that should never reach the LLM.
+excludedRoles:
+  - Sales
+  - Business Development
+  - Technical Support
+  - QA Tester
+  - Data Entry
+
+# Industries you will not work in.
+excludedIndustries:
+  - Gambling
+  - Defence
+  - Tobacco
+
+# Any posting mentioning these is dropped before evaluation.
+excludedKeywords:
+  - unpaid
+  - commission only
+  - bond required
+  - night shift only
+
+education: 'B.Tech, Computer Science'
+workAuthorization: 'Indian citizen; no sponsorship required for India'
+noticePeriod: '60 days'
+
+# Free-text preferences the model is told to weigh.
+additionalPreferences:
+  - Prefer product companies over service or consultancy firms
+  - Prefer teams that practise code review and automated testing
+  - Avoid roles requiring more than 10% travel
