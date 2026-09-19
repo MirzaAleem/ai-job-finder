@@ -1,0 +1,37 @@
+node_modules/
+dist/
+coverage/
+
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+
+# Local config containing personal data
+config/profile.yaml
+config/sources.yaml
+
+# Local database (SQLite file plus its WAL/shared-memory sidecars)
+data/
+*.db
+*.db-wal
+*.db-shm
+
+# Generated output
+output/*
+!output/.gitkeep
+
+# launchd run logs
+logs/*
+!logs/.gitkeep
+
+# Playwright / OS
+.playwright/
+test-results/
+.DS_Store
+*.log
+
+# Promo video workspace — a local authoring scratchpad, not part of the project.
+# The finished promo the README embeds lives on the orphan `assets` branch, so
+# that a clone of main never pays for the binary.
+video/
