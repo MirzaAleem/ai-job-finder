@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Job Finder</title>
+    <link rel="stylesheet" href="/app.css" />
+    <link rel="stylesheet" href="/views.css" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#127919;</text></svg>"
+    />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar__row">
+        <h1 class="brand">Job&nbsp;Finder</h1>
+        <div class="runinfo" id="runinfo"></div>
+        <div class="topbar__actions">
+          <button
+            class="iconbtn"
+            id="help-btn"
+            title="Keyboard shortcuts (?)"
+            aria-label="Keyboard shortcuts"
+          >
+            ⌘
+          </button>
+          <button class="iconbtn" id="theme-btn" title="Toggle theme" aria-label="Toggle theme">
+            ◐
+          </button>
+          <button class="iconbtn" id="refresh-btn" title="Refresh (r)" aria-label="Refresh">
+            ↻
+          </button>
+        </div>
+      </div>
+
+      <nav class="tabs" aria-label="Sections">
+        <a class="tab" href="#/jobs" data-view="jobs">Jobs</a>
+        <a class="tab" href="#/run" data-view="run">Run</a>
+        <a class="tab" href="#/history" data-view="history">History</a>
+        <a class="tab" href="#/settings" data-view="settings">Settings</a>
+        <a class="tab" href="#/profile" data-view="profile">Profile</a>
+      </nav>
+    </header>
+
+    <!-- ── Jobs ───────────────────────────────────────────────────────── -->
+    <section class="view" id="view-jobs" hidden>
+      <nav class="pills" id="status-pills" aria-label="Filter by status"></nav>
+
+      <div class="filters">
+        <div class="filters__row">
+          <label class="field field--grow">
+            <span class="field__label">Search</span>
+            <input
+              type="search"
+              id="f-search"
+              placeholder="title, company, description…"
+              autocomplete="off"
+            />
+          </label>
+
+          <label class="field">
+            <span class="field__label">Recommendation</span>
+            <select id="f-recommendation">
+              <option value="">Any</option>
+              <option value="HIGH_PRIORITY">High priority</option>
+              <option value="APPLY">Apply</option>
+              <option value="CONSIDER">Consider</option>
+              <option value="HIGH_PRIORITY,APPLY">High priority + Apply</option>
+              <option value="SKIP">Skip</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span class="field__label">Company</span>
+            <select id="f-company">
+              <option value="">Any</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span class="field__label">Min score <output id="f-score-out">0</output></span>
+            <input type="range" id="f-score" min="0" max="100" step="5" value="0" />
+          </label>
+
+          <label class="field">
+            <span class="field__label">Sort</span>
+            <select id="f-sort">
+              <option value="score">Score</option>
+              <option value="posted">Recently posted</option>
+              <option value="firstSeen">Recently found</option>
+              <option value="company">Company</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="filters__row filters__row--toggles">
+          <label class="check"><input type="checkbox" id="f-new" /> <span>New only</span></label>
+          <label class="check"
+            ><input type="checkbox" id="f-closed" />
+            <span>Show dismissed &amp; rejected</span></label
+          >
+          <span class="spacer"></span>
+          <span class="resultcount" id="resultcount"></span>
+          <button class="linkbtn" id="clear-btn">Clear filters</button>
+        </div>
+      </div>
+
+      <main id="list" class="list" aria-live="polite"></main>
+    </section>
+
+    <!-- ── Run ────────────────────────────────────────────────────────── -->
+    <section class="view" id="view-run" hidden>
+      <div class="view__head">
+        <h2 class="view__title">Run a search</h2>
+        <p class="view__lede">
+          Fetches postings, removes duplicates, filters them against your profile, then scores what
+          is left with your local model. Nothing leaves your machine unless cloud escalation is
+          switched on.
+        </p>
+      </div>
+
+      <div class="notice" id="run-connection" hidden></div>
+
+      <div class="runctl">
+        <button class="btn btn--primary btn--lg" id="run-start">Run now</button>
+        <button class="btn" id="run-cancel" hidden>Stop after the current batch</button>
+        <span class="runctl__state" id="run-state"></span>
+      </div>
+
+      <details class="runopts">
+        <summary>Options for this run</summary>
+        <p class="muted">These apply to this run only. They are never written to your settings.</p>
+        <div class="runopts__grid">
+          <label class="check"
+            ><input type="checkbox" data-run-source="mock" /> <span>Sample jobs (mock)</span></label
+          >
+          <label class="check"
+            ><input type="checkbox" data-run-source="import" /> <span>Imported file</span></label
+          >
+          <label class="check"
+            ><input type="checkbox" data-run-source="companies" />
+            <span>Company career pages</span></label
+          >
+          <label class="check"
+            ><input type="checkbox" id="run-no-cloud" />
+            <span>Local model only, no cloud calls</span></label
+          >
+          <label class="check"
+            ><input type="checkbox" id="run-dry" />
+            <span>Dry run — do not save to the database</span></label
+          >
+          <label class="check"
+            ><input type="checkbox" id="run-skip-export" />
+            <span>Skip writing CSV and JSON</span></label
+          >
+        </div>
+        <p class="muted">Leave every source unticked to use whatever is enabled in Settings.</p>
+      </details>
+
+      <ol class="stages" id="run-stages"></ol>
+      <div class="progress" id="run-progress" role="progressbar" aria-label="Run progress" hidden>
+        <div class="progress__bar"></div>
+      </div>
+      <p class="sr-only" id="run-announce" aria-live="polite"></p>
+
+      <div id="run-summary" hidden></div>
+
+      <div class="logbar">
+        <label class="check"
+          ><input type="checkbox" id="log-errors-only" />
+          <span>Warnings and errors only</span></label
+        >
+        <span class="spacer"></span>
+        <button class="linkbtn" id="log-copy">Copy log</button>
+      </div>
+      <div class="logpane" id="run-log" role="log" aria-live="off" tabindex="0"></div>
+      <button class="btn logpane__jump" id="log-jump" hidden>↓ Jump to latest</button>
+    </section>
+
+    <!-- ── History ────────────────────────────────────────────────────── -->
+    <section class="view" id="view-history" hidden>
+      <div class="view__head">
+        <h2 class="view__title">Past runs</h2>
+        <p class="view__lede">
+          Every run, what it found and what it cost. Click a row to see which sources contributed
+          and why any job was sent to the cloud.
+        </p>
+      </div>
+
+      <div class="empty" id="history-empty" hidden>
+        <h3>No runs yet</h3>
+        <p><a class="btn btn--primary" href="#/run">Start your first run</a></p>
+      </div>
+
+      <div class="tablewrap" id="history-table" hidden>
+        <table class="table table--zebra">
+          <thead>
+            <tr>
+              <th>Started</th>
+              <th>Took</th>
+              <th>Status</th>
+              <th class="num">Fetched</th>
+              <th class="num">Scored</th>
+              <th class="num">New</th>
+              <th class="num">Worth applying</th>
+              <th class="num">Cloud calls</th>
+              <th class="num">Cost</th>
+            </tr>
+          </thead>
+          <tbody id="history-body"></tbody>
+        </table>
+      </div>
+
+      <div class="logbar">
+        <span class="resultcount" id="history-count"></span>
+        <span class="spacer"></span>
+        <button class="btn" id="history-more" hidden>Load more</button>
+      </div>
+    </section>
+
+    <!-- ── Settings ───────────────────────────────────────────────────── -->
+    <section class="view" id="view-settings" hidden>
+      <div class="view__head">
+        <h2 class="view__title">Settings</h2>
+        <p class="view__lede">
+          Everything here is written to your <code>.env</code> file, with its comments left intact.
+          You can still edit that file by hand — this page is just a friendlier way in.
+        </p>
+      </div>
+
+      <div id="settings-restart" hidden></div>
+
+      <div class="panel">
+        <div class="panel__row">
+          <button class="btn" id="settings-probe-btn">Check my setup</button>
+          <div class="probes" id="settings-probe"></div>
+        </div>
+        <div class="panel__row" id="settings-models"></div>
+      </div>
+
+      <div id="score-bands" class="panel"></div>
+
+      <form id="settings-form" class="form" autocomplete="off"></form>
+
+      <div class="formbar" id="settings-bar">
+        <span class="formbar__state"></span>
+        <span class="formbar__error" hidden></span>
+        <span class="spacer"></span>
+        <button type="button" class="btn" data-action="revert" disabled>Revert</button>
+        <button type="button" class="btn btn--primary" data-action="save" disabled>
+          Save changes
+        </button>
+      </div>
+    </section>
+
+    <!-- ── Profile ────────────────────────────────────────────────────── -->
+    <section class="view" id="view-profile" hidden>
+      <div class="view__head">
+        <h2 class="view__title">Your profile</h2>
+        <p class="view__lede">
+          This is what every job is matched against. Missing information never rejects a job: a
+          posting that does not state a salary is not treated as low-paying.
+        </p>
+      </div>
+
+      <div id="profile-status" hidden></div>
+
+      <div class="segmented" role="group" aria-label="Editing mode">
+        <button type="button" class="seg" data-profile-mode="form" aria-pressed="true">Form</button>
+        <button type="button" class="seg" data-profile-mode="yaml" aria-pressed="false">
+          YAML
+        </button>
+      </div>
+
+      <div id="profile-form-pane">
+        <form id="profile-form" class="form" autocomplete="off"></form>
+        <div class="formbar" id="profile-bar">
+          <span class="formbar__state"></span>
+          <span class="formbar__error" hidden></span>
+          <span class="spacer"></span>
+          <button type="button" class="btn" data-action="revert" disabled>Revert</button>
+          <button type="button" class="btn btn--primary" data-action="save" disabled>
+            Save profile
+          </button>
+        </div>
+      </div>
+
+      <div id="profile-yaml-pane" hidden>
+        <p class="notice notice--info">
+          Editing the YAML directly keeps your comments. Saving from the form above rewrites the
+          file and drops them.
+        </p>
+        <textarea id="profile-yaml" class="code-editor" spellcheck="false" rows="24"></textarea>
+        <p class="ff__error" id="profile-yaml-error" role="alert" hidden></p>
+        <div class="formbar">
+          <span class="spacer"></span>
+          <button type="button" class="btn btn--primary" id="profile-yaml-save">Save YAML</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Dialogs ────────────────────────────────────────────────────── -->
+    <div class="modal" id="help" hidden>
+      <div class="modal__panel" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts">
+        <h2>Keyboard shortcuts</h2>
+
+        <h3 class="keys__group">Everywhere</h3>
+        <dl class="keys">
+          <dt>1 &hellip; 5</dt>
+          <dd>Jobs / Run / History / Settings / Profile</dd>
+          <dt>r</dt>
+          <dd>Refresh this section</dd>
+          <dt>?</dt>
+          <dd>This help</dd>
+          <dt>Esc</dt>
+          <dd>Close</dd>
+        </dl>
+
+        <h3 class="keys__group">Jobs</h3>
+        <dl class="keys">
+          <dt>j / ↓</dt>
+          <dd>Next job</dd>
+          <dt>k / ↑</dt>
+          <dd>Previous job</dd>
+          <dt>Enter</dt>
+          <dd>Expand or collapse</dd>
+          <dt>o</dt>
+          <dd>Open the application page</dd>
+          <dt>a</dt>
+          <dd>Mark applied</dd>
+          <dt>i</dt>
+          <dd>Mark interested</dd>
+          <dt>x</dt>
+          <dd>Dismiss</dd>
+          <dt>u</dt>
+          <dd>Reset to new</dd>
+          <dt>/</dt>
+          <dd>Focus search</dd>
+        </dl>
+
+        <h3 class="keys__group">Run</h3>
+        <dl class="keys">
+          <dt>⌘ / Ctrl + Enter</dt>
+          <dd>Start a run</dd>
+          <dt>End</dt>
+          <dd>Follow the log again</dd>
+        </dl>
+
+        <h3 class="keys__group">Forms</h3>
+        <dl class="keys">
+          <dt>⌘ / Ctrl + Enter</dt>
+          <dd>Save</dd>
+        </dl>
+
+        <button class="btn" data-action="close-modal">Close</button>
+      </div>
+    </div>
+
+    <div class="modal" id="leave-confirm" hidden>
+      <div
+        class="modal__panel modal__panel--narrow"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="leave-title"
+      >
+        <h2 id="leave-title">You have unsaved changes</h2>
+        <p>Leaving this section now will discard them.</p>
+        <div class="modal__actions">
+          <button class="btn" id="leave-discard">Discard changes</button>
+          <button class="btn btn--primary" id="leave-stay">Keep editing</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast" hidden></div>
+
+    <script type="module" src="/js/main.js"></script>
+  </body>
+</html>
